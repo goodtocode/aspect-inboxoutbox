@@ -1,0 +1,35 @@
+using Goodtocode.InboxOutbox.Entities;
+using Goodtocode.InboxOutbox.Services;
+
+namespace Goodtocode.InboxOutbox.Tests;
+
+[TestClass]
+public class OutboxMessageTests
+{
+    [TestMethod]
+    public void OutboxMessage_CanBeCreated()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var occurredOn = DateTime.UtcNow;
+        var type = "TestEvent";
+        var payload = "{\"test\":\"data\"}";
+
+        // Act
+        var outboxMessage = new OutboxMessage
+        {
+            Id = id,
+            OccurredOnUtc = occurredOn,
+            Type = type,
+            Payload = payload,
+            Status = 0
+        };
+
+        // Assert
+        Assert.AreEqual(id, outboxMessage.Id);
+        Assert.AreEqual(occurredOn, outboxMessage.OccurredOnUtc);
+        Assert.AreEqual(type, outboxMessage.Type);
+        Assert.AreEqual(payload, outboxMessage.Payload);
+        Assert.AreEqual(0, outboxMessage.Status);
+    }
+}
