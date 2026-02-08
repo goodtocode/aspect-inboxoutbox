@@ -15,10 +15,10 @@
 		<PackageId>Goodtocode.InboxOutbox</PackageId>
 		<Authors>Robert Good</Authors>
 		<Company>Goodtocode</Company>
-		<Description>Foundational .NET types for building DDD, clean architecture, and event-driven systems.</Description>
-		<PackageTags>domain-driven-design;ddd;entity;domain;library;dotnet;clean-architecture</PackageTags>
-		<RepositoryUrl>https://github.com/Goodtocode/aspect-domain</RepositoryUrl>
-		<PackageProjectUrl>https://github.com/Goodtocode/aspect-domain</PackageProjectUrl>
+		<Description>Infrastructure library for implementing the Inbox/Outbox pattern for event-driven architecture with .NET. Supports Azure Service Bus, Event Grid, and Event Hub.</Description>
+		<PackageTags>inbox;outbox;event-driven;eda;messaging;domain-events;azure-service-bus;event-grid;event-hub;ddd;clean-architecture</PackageTags>
+		<RepositoryUrl>https://github.com/Goodtocode/aspect-inboxoutbox</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Goodtocode/aspect-inboxoutbox</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Copyright>Copyright © 2026 Goodtocode</Copyright>
 		<PackageIcon>Goodtocode-icon.png</PackageIcon>
@@ -28,6 +28,14 @@
 	<ItemGroup>
 		<None Include="Goodtocode-icon.png" Pack="true" PackagePath="" />
 		<None Include="..\..\README.md" Pack="true" PackagePath="" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.17" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+		<PackageReference Include="System.Text.Json" Version="5.0.2" />
 	</ItemGroup>
 
 </Project>
