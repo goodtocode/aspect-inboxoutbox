@@ -28,8 +28,7 @@ public class DefaultEventTypeRegistry : IEventTypeRegistry
 
     public void Register(Type eventType)
     {
-        if (eventType is null)
-            throw new ArgumentNullException(nameof(eventType));
+        ArgumentNullException.ThrowIfNull(eventType);
 
         _typeMap.TryAdd(eventType.Name, eventType);
     }

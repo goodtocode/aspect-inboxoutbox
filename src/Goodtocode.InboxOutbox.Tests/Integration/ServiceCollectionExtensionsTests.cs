@@ -9,7 +9,7 @@ namespace Goodtocode.InboxOutbox.Tests.Integration;
 public class ServiceCollectionExtensionsTests
 {
     [TestMethod]
-    public void AddInboxOutbox_RegistersRequiredServices()
+    public void AddInboxOutboxRegistersRequiredServices()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -20,10 +20,10 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var eventTypeRegistry = serviceProvider.GetService<Interfaces.IEventTypeRegistry>();
         Assert.IsNotNull(eventTypeRegistry);
-        
+
         var interceptor = serviceProvider.GetService<Interceptors.OutboxSaveChangesInterceptor>();
         Assert.IsNotNull(interceptor);
     }

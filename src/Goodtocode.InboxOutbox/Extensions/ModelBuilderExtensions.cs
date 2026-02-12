@@ -13,8 +13,7 @@ public static class ModelBuilderExtensions
     /// </summary>
     public static ModelBuilder ApplyInboxOutbox(this ModelBuilder modelBuilder)
     {
-        if (modelBuilder is null)
-            throw new ArgumentNullException(nameof(modelBuilder));
+        ArgumentNullException.ThrowIfNull(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new InboxMessageConfiguration());

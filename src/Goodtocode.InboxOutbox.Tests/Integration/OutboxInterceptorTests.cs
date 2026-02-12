@@ -10,7 +10,7 @@ namespace Goodtocode.InboxOutbox.Tests.Integration;
 public class OutboxInterceptorTests
 {
     [TestMethod]
-    public async Task OutboxInterceptor_CapturesDomainEvents_Success()
+    public async Task OutboxInterceptorCapturesDomainEventsSuccess()
     {
         // Arrange
         var options = new DbContextOptionsBuilder<TestDbContext>()
@@ -19,7 +19,7 @@ public class OutboxInterceptorTests
             .Options;
 
         using var context = new TestDbContext(options);
-        
+
         var entity = new TestDomainEntity(Guid.NewGuid(), "Test Entity");
         entity.RaiseTestEvent();
 
@@ -50,7 +50,7 @@ public class TestDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyInboxOutbox();
-        
+
         modelBuilder.Entity<TestDomainEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
