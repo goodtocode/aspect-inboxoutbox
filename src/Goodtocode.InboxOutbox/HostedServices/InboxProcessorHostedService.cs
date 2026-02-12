@@ -50,7 +50,7 @@ public sealed class InboxProcessorHostedService : BackgroundService
     private async Task ProcessInboxMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        
+
         var dbContext = scope.ServiceProvider.GetService<DbContext>();
         if (dbContext is null)
         {
@@ -91,8 +91,8 @@ public sealed class InboxProcessorHostedService : BackgroundService
 
                     message.Status = 1; // Processed
                     message.ProcessedOnUtc = DateTime.UtcNow;
-                    
-                    _logger.LogInformation("Processed inbox message {MessageId} of type {EventType}", 
+
+                    _logger.LogInformation("Processed inbox message {MessageId} of type {EventType}",
                         message.Id, message.Type);
                 }
             }
@@ -100,8 +100,8 @@ public sealed class InboxProcessorHostedService : BackgroundService
             {
                 message.Status = 2; // Failed
                 message.ProcessingError = ex.ToString();
-                
-                _logger.LogError(ex, "Failed to process inbox message {MessageId} of type {EventType}", 
+
+                _logger.LogError(ex, "Failed to process inbox message {MessageId} of type {EventType}",
                     message.Id, message.Type);
             }
         }

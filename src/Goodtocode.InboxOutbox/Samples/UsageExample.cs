@@ -20,7 +20,7 @@ public class UsageExample
         {
             // Configure your database provider (e.g., UseSqlServer, UseNpgsql, etc.)
             // options.UseSqlServer("YourConnectionString");
-            
+
             // Add the outbox interceptor
             var interceptor = serviceProvider.GetRequiredService<OutboxSaveChangesInterceptor>();
             options.AddInterceptors(interceptor);
@@ -37,7 +37,7 @@ public class UsageExample
 
         // Register your event bus implementation
         services.AddSingleton<IEventBus, AzureServiceBusEventBus>();
-        
+
         // Register your event consumer implementation
         services.AddSingleton<IEventConsumer, OrderEventConsumer>();
     }
@@ -103,7 +103,7 @@ public class UsageExample
         {
             // Apply inbox/outbox configurations
             modelBuilder.ApplyInboxOutbox();
-            
+
             base.OnModelCreating(modelBuilder);
         }
     }

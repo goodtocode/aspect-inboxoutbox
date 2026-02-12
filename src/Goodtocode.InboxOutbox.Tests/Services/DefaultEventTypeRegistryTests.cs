@@ -10,7 +10,7 @@ public class DefaultEventTypeRegistryTests
     {
         // Arrange
         var registry = new DefaultEventTypeRegistry();
-        
+
         // Act
         registry.Register<TestEvent>();
         var resolvedType = registry.Resolve(nameof(TestEvent));

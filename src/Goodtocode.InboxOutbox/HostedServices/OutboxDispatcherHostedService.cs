@@ -50,7 +50,7 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
     private async Task ProcessOutboxMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        
+
         var dbContext = scope.ServiceProvider.GetService<DbContext>();
         if (dbContext is null)
         {
@@ -91,8 +91,8 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
 
                     message.Status = 1; // Published
                     message.LastDispatchedOnUtc = DateTime.UtcNow;
-                    
-                    _logger.LogInformation("Published outbox message {MessageId} of type {EventType}", 
+
+                    _logger.LogInformation("Published outbox message {MessageId} of type {EventType}",
                         message.Id, message.Type);
                 }
             }
@@ -100,8 +100,8 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
             {
                 message.Status = 2; // Failed
                 message.LastDispatchError = ex.ToString();
-                
-                _logger.LogError(ex, "Failed to publish outbox message {MessageId} of type {EventType}", 
+
+                _logger.LogError(ex, "Failed to publish outbox message {MessageId} of type {EventType}",
                     message.Id, message.Type);
             }
         }

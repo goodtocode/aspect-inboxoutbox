@@ -20,10 +20,10 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        
+
         var eventTypeRegistry = serviceProvider.GetService<Interfaces.IEventTypeRegistry>();
         Assert.IsNotNull(eventTypeRegistry);
-        
+
         var interceptor = serviceProvider.GetService<Interceptors.OutboxSaveChangesInterceptor>();
         Assert.IsNotNull(interceptor);
     }
