@@ -106,7 +106,7 @@ public sealed class InboxProcessorHostedService : BackgroundService
             }
         }
 
-        if (messages.Any())
+        if (messages.Count != 0)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }

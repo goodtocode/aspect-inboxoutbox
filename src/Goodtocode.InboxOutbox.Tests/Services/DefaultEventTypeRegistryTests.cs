@@ -6,7 +6,7 @@ namespace Goodtocode.InboxOutbox.Tests;
 public class DefaultEventTypeRegistryTests
 {
     [TestMethod]
-    public void Register_AndResolve_EventType_Success()
+    public void RegisterAndResolveEventTypeSuccess()
     {
         // Arrange
         var registry = new DefaultEventTypeRegistry();
@@ -21,18 +21,17 @@ public class DefaultEventTypeRegistryTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
-    public void Resolve_UnregisteredEventType_ThrowsException()
+    public void ResolveUnregisteredEventTypeThrowsException()
     {
         // Arrange
         var registry = new DefaultEventTypeRegistry();
 
         // Act & Assert
-        registry.Resolve("UnknownEvent");
+        Assert.Throws<InvalidOperationException>(() => registry.Resolve("UnknownEvent"));
     }
 
     [TestMethod]
-    public void Register_SameEventTypeTwice_DoesNotThrow()
+    public void RegisterSameEventTypeTwiceDoesNotThrow()
     {
         // Arrange
         var registry = new DefaultEventTypeRegistry();

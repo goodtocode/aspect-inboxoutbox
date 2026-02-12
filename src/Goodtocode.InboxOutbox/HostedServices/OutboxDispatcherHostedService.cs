@@ -106,7 +106,7 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
             }
         }
 
-        if (messages.Any())
+        if (messages.Count != 0)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }

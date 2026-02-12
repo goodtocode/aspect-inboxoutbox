@@ -10,7 +10,7 @@ namespace Goodtocode.InboxOutbox.Tests.Integration;
 public class OutboxInterceptorTests
 {
     [TestMethod]
-    public async Task OutboxInterceptor_CapturesDomainEvents_Success()
+    public async Task OutboxInterceptorCapturesDomainEventsSuccess()
     {
         // Arrange
         var options = new DbContextOptionsBuilder<TestDbContext>()

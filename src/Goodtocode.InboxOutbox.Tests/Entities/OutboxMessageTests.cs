@@ -7,7 +7,7 @@ namespace Goodtocode.InboxOutbox.Tests;
 public class OutboxMessageTests
 {
     [TestMethod]
-    public void OutboxMessage_CanBeCreated()
+    public void OutboxMessageCanBeCreated()
     {
         // Arrange
         var id = Guid.NewGuid();

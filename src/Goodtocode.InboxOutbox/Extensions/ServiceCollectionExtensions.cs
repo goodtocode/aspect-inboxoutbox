@@ -19,8 +19,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration? configuration = null)
     {
-        if (services is null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         // Register event type registry
         services.AddSingleton<IEventTypeRegistry, DefaultEventTypeRegistry>();
@@ -43,8 +42,7 @@ public static class ServiceCollectionExtensions
         IConfiguration? configuration = null)
         where TEventTypeRegistry : class, IEventTypeRegistry
     {
-        if (services is null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         // Register custom event type registry
         services.AddSingleton<IEventTypeRegistry, TEventTypeRegistry>();

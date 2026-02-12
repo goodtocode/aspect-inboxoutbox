@@ -9,7 +9,7 @@ namespace Goodtocode.InboxOutbox.Tests.Integration;
 public class ServiceCollectionExtensionsTests
 {
     [TestMethod]
-    public void AddInboxOutbox_RegistersRequiredServices()
+    public void AddInboxOutboxRegistersRequiredServices()
     {
         // Arrange
         var services = new ServiceCollection();
