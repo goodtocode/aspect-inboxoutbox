@@ -30,6 +30,7 @@ permissions:
   security-events: write
 
 env:
+  CONFIGURATION: "Release"
   SCRIPTS_PATH: "./.github/scripts"
   SRC_PATH: "./src"
   PROJECT_PATH: "Goodtocode.InboxOutbox"
@@ -46,9 +47,11 @@ jobs:
     strategy:
       matrix:
         DOTNET_VERSION: ["10.x"]
-
     env:
       RUNTIME_ENV: "Development"
+      CONFIGURATION: "Release"
+      VERSION_MAJOR: '1'
+      VERSION_MINOR: '1'
 
     steps:
       - name: checkout
@@ -60,16 +63,19 @@ jobs:
           dotnet-version: ${{ matrix.DOTNET_VERSION }}
 
       - name: Get Semantic Version
-        id: get_semver
+        id: get_version
         run: |
-          $json = & "${{ env.SCRIPTS_PATH }}/ci/Get-Version.ps1" -Major 1 -Minor 1 -Patch $env:GITHUB_RUN_NUMBER
-          $semver = ($json | ConvertFrom-Json).SemanticVersion
-          echo "SEMANTIC_VERSION=$semver" >> $env:GITHUB_OUTPUT
+          $json = & "${{ env.SCRIPTS_PATH }}/ci/Get-Version.ps1" -Major ${{ env.VERSION_MAJOR }} -Minor ${{ env.VERSION_MINOR }} -Patch $env:GITHUB_RUN_NUMBER
+          $versionObj = ($json | ConvertFrom-Json)
+          echo "SEMANTIC_VERSION=$($versionObj.SemanticVersion)" >> $env:GITHUB_OUTPUT
+          echo "FILE_VERSION=$($versionObj.FileVersion)" >> $env:GITHUB_OUTPUT
+          echo "ASSEMBLY_VERSION=$($versionObj.AssemblyVersion)" >> $env:GITHUB_OUTPUT
+          echo "INFORMATIONAL_VERSION=$($versionObj.InformationalVersion)" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
       - name: Set-Version.ps1
         run: |
-          $version = ${{ env.SCRIPTS_PATH }}/ci/Set-Version.ps1 -Path ${{ env.SRC_PATH }} -VersionToReplace 1.0.0 -Major 1 -Minor 1
+          $version = ${{ env.SCRIPTS_PATH }}/ci/Set-Version.ps1 -Path ${{ env.SRC_PATH }} -VersionToReplace 1.0.0 -Major ${{ env.VERSION_MAJOR }} -Minor ${{ env.VERSION_MINOR }} -Patch $env:GITHUB_RUN_NUMBER
           echo $version
           echo "VERSION=$version" >> $GITHUB_ENV
         shell: pwsh
@@ -86,13 +92,22 @@ jobs:
 
       - name: Build
         run: |
-          dotnet build ${{ env.SRC_PATH }}/${{ env.SRC_SLN }} --configuration Release
+          dotnet build ${{ env.SRC_PATH }}/${{ env.SRC_SLN }} --configuration ${{ env.CONFIGURATION }}
         shell: pwsh
 
       - name: Test
         run: |
+          cd ${{ env.SRC_PATH }}/${{ env.TEST_PATH }}
+          dotnet run --configuration ${{ env.CONFIGURATION }} --no-build
+        shell: pwsh
+
+      - name: Copy test results
+        if: ${{ always() }}
+        run: |
           mkdir -p TestResults-${{ matrix.DOTNET_VERSION }}
-          dotnet test ${{ env.SRC_PATH }}/${{ env.TEST_PATH }}/${{ env.TEST_PROJECT }} --results-directory TestResults-${{ matrix.DOTNET_VERSION }} --collect:"Code Coverage" --verbosity normal
+          if (Test-Path "${{ env.SRC_PATH }}/${{ env.TEST_PATH }}/bin/Release/net10.0/TestResults") {
+            Copy-Item -Path "${{ env.SRC_PATH }}/${{ env.TEST_PATH }}/bin/Release/net10.0/TestResults/*" -Destination "TestResults-${{ matrix.DOTNET_VERSION }}" -Recurse -Force
+          }
         shell: pwsh
 
       - name: Upload test results
@@ -104,7 +119,7 @@ jobs:
 
       - name: Pack NuGet package
         run: |
-          dotnet pack ${{ env.SRC_PATH }}/${{ env.PROJECT_PATH }}/${{ env.PROJECT_FILE }} --configuration Release --no-build --output nupkg_output --version ${{ steps.get_semver.outputs.SEMANTIC_VERSION }}
+          dotnet pack ${{ env.SRC_PATH }}/${{ env.PROJECT_PATH }}/${{ env.PROJECT_FILE }} --configuration ${{ env.CONFIGURATION }} --no-build --output nupkg_output --version ${{ steps.get_version.outputs.SEMANTIC_VERSION }}
         shell: pwsh
 
       - name: Upload NuGet package artifact
@@ -115,6 +130,22 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
+        if: ${{ !github.event.repository.private }}
+
+      - name: Run Coverage Script
+        run: |
+          pwsh ${{ env.SCRIPTS_PATH }}/ci/Get-CodeCoverage.ps1 `
+            -TestProjectFilter '${{ env.TEST_PROJECT }}' `
+            -Configuration '${{ env.CONFIGURATION }}' `
+            -TestRootPath '${{ env.SRC_PATH }}'
+        shell: pwsh
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.DOTNET_VERSION }}
+          path: ${{ env.SRC_PATH }}/TestResults/Reports/**/index.html
+        if: ${{ always() }}
 
   cd:
     name: "NuGet CD"
