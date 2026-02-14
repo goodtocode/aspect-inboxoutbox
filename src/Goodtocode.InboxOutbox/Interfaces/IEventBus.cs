@@ -5,5 +5,5 @@ namespace Goodtocode.InboxOutbox.Interfaces;
 /// </summary>
 public interface IEventBus
 {
-    Task PublishAsync(object @event, CancellationToken cancellationToken = default);
+    Task PublishAsync(object eventData, CancellationToken cancellationToken = default);
 }

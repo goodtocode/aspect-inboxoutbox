@@ -5,5 +5,5 @@ namespace Goodtocode.InboxOutbox.Interfaces;
 /// </summary>
 public interface IEventPublisher
 {
-    Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class;
+    Task PublishAsync<TEvent>(TEvent eventData, CancellationToken cancellationToken = default) where TEvent : class;
 }

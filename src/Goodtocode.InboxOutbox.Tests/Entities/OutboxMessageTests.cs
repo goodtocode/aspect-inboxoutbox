@@ -1,7 +1,7 @@
 using Goodtocode.InboxOutbox.Entities;
 using Goodtocode.InboxOutbox.Services;
 
-namespace Goodtocode.InboxOutbox.Tests;
+namespace Goodtocode.InboxOutbox.Tests.Entities;
 
 [TestClass]
 public class OutboxMessageTests

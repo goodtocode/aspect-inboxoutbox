@@ -11,24 +11,17 @@ namespace Goodtocode.InboxOutbox.HostedServices;
 /// <summary>
 /// Background service that processes inbox messages
 /// </summary>
-public sealed class InboxProcessorHostedService : BackgroundService
+public sealed class InboxProcessorHostedService(
+    IServiceProvider serviceProvider,
+    ILogger<InboxProcessorHostedService> logger) : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<InboxProcessorHostedService> _logger;
-    private readonly TimeSpan _interval;
-
-    public InboxProcessorHostedService(
-        IServiceProvider serviceProvider,
-        ILogger<InboxProcessorHostedService> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-        _interval = TimeSpan.FromMilliseconds(500);
-    }
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<InboxProcessorHostedService> _logger = logger;
+    private readonly TimeSpan _interval = TimeSpan.FromMilliseconds(500);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Inbox Processor Hosted Service started");
+        _logger.LogInboxProcessorStarted();
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -38,13 +31,13 @@ public sealed class InboxProcessorHostedService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing inbox messages");
+                _logger.LogErrorProcessingInboxMessages(ex);
             }
 
             await Task.Delay(_interval, stoppingToken);
         }
 
-        _logger.LogInformation("Inbox Processor Hosted Service stopped");
+        _logger.LogInboxProcessorStopped();
     }
 
     private async Task ProcessInboxMessagesAsync(CancellationToken cancellationToken)
@@ -54,21 +47,21 @@ public sealed class InboxProcessorHostedService : BackgroundService
         var dbContext = scope.ServiceProvider.GetService<DbContext>();
         if (dbContext is null)
         {
-            _logger.LogWarning("No DbContext registered. Inbox processor cannot run.");
+            _logger.LogNoDbContextRegisteredInbox();
             return;
         }
 
         var eventConsumer = scope.ServiceProvider.GetService<IEventConsumer>();
         if (eventConsumer is null)
         {
-            _logger.LogWarning("No IEventConsumer registered. Inbox processor cannot run.");
+            _logger.LogNoEventConsumerRegistered();
             return;
         }
 
         var eventTypeRegistry = scope.ServiceProvider.GetService<IEventTypeRegistry>();
         if (eventTypeRegistry is null)
         {
-            _logger.LogWarning("No IEventTypeRegistry registered. Inbox processor cannot run.");
+            _logger.LogNoEventTypeRegistryRegisteredInbox();
             return;
         }
 
@@ -92,8 +85,7 @@ public sealed class InboxProcessorHostedService : BackgroundService
                     message.Status = 1; // Processed
                     message.ProcessedOnUtc = DateTime.UtcNow;
 
-                    _logger.LogInformation("Processed inbox message {MessageId} of type {EventType}",
-                        message.Id, message.Type);
+                    _logger.LogProcessedInboxMessage(message.Id, message.Type);
                 }
             }
             catch (Exception ex)
@@ -101,8 +93,7 @@ public sealed class InboxProcessorHostedService : BackgroundService
                 message.Status = 2; // Failed
                 message.ProcessingError = ex.ToString();
 
-                _logger.LogError(ex, "Failed to process inbox message {MessageId} of type {EventType}",
-                    message.Id, message.Type);
+                _logger.LogFailedToProcessInboxMessage(ex, message.Id, message.Type);
             }
         }
 
@@ -111,4 +102,31 @@ public sealed class InboxProcessorHostedService : BackgroundService
             await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
+}
+
+public static partial class InboxLoggerExtensions
+{
+    [LoggerMessage(EventId = 10, Level = LogLevel.Information, Message = "Inbox Processor Hosted Service started")]
+    public static partial void LogInboxProcessorStarted(this ILogger logger);
+
+    [LoggerMessage(EventId = 11, Level = LogLevel.Information, Message = "Inbox Processor Hosted Service stopped")]
+    public static partial void LogInboxProcessorStopped(this ILogger logger);
+
+    [LoggerMessage(EventId = 12, Level = LogLevel.Error, Message = "Error processing inbox messages")]
+    public static partial void LogErrorProcessingInboxMessages(this ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 13, Level = LogLevel.Warning, Message = "No DbContext registered. Inbox processor cannot run.")]
+    public static partial void LogNoDbContextRegisteredInbox(this ILogger logger);
+
+    [LoggerMessage(EventId = 14, Level = LogLevel.Warning, Message = "No IEventConsumer registered. Inbox processor cannot run.")]
+    public static partial void LogNoEventConsumerRegistered(this ILogger logger);
+
+    [LoggerMessage(EventId = 15, Level = LogLevel.Warning, Message = "No IEventTypeRegistry registered. Inbox processor cannot run.")]
+    public static partial void LogNoEventTypeRegistryRegisteredInbox(this ILogger logger);
+
+    [LoggerMessage(EventId = 16, Level = LogLevel.Information, Message = "Processed inbox message {MessageId} of type {EventType}")]
+    public static partial void LogProcessedInboxMessage(this ILogger logger, Guid messageId, string eventType);
+
+    [LoggerMessage(EventId = 17, Level = LogLevel.Error, Message = "Failed to process inbox message {MessageId} of type {EventType}")]
+    public static partial void LogFailedToProcessInboxMessage(this ILogger logger, Exception exception, Guid messageId, string eventType);
 }

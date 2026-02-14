@@ -4,7 +4,7 @@ using Goodtocode.InboxOutbox.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Goodtocode.InboxOutbox.Samples;
+namespace Goodtocode.InboxOutbox.Tests.Samples;
 
 /// <summary>
 /// Sample code demonstrating how to use the Inbox/Outbox infrastructure
@@ -47,7 +47,7 @@ public class UsageExample
     /// </summary>
     public class Order : IDomainEntity
     {
-        private readonly List<IDomainEvent> _domainEvents = new();
+        private readonly List<IDomainEvent> _domainEvents = [];
 
         public Guid Id { get; private set; }
         public string OrderNumber { get; private set; } = string.Empty;
@@ -74,29 +74,18 @@ public class UsageExample
     /// <summary>
     /// Example: Domain event
     /// </summary>
-    public class OrderCompletedEvent : IDomainEvent
+    public class OrderCompletedEvent(Guid orderId, string orderNumber) : IDomainEvent
     {
-        public Guid OrderId { get; }
-        public string OrderNumber { get; }
-        public DateTime OccurredOnUtc { get; }
-
-        public OrderCompletedEvent(Guid orderId, string orderNumber)
-        {
-            OrderId = orderId;
-            OrderNumber = orderNumber;
-            OccurredOnUtc = DateTime.UtcNow;
-        }
+        public Guid OrderId { get; } = orderId;
+        public string OrderNumber { get; } = orderNumber;
+        public DateTime OccurredOnUtc { get; } = DateTime.UtcNow;
     }
 
     /// <summary>
     /// Example: DbContext with Inbox/Outbox
     /// </summary>
-    public class OrderDbContext : DbContext
+    public class OrderDbContext(DbContextOptions<UsageExample.OrderDbContext> options) : DbContext(options)
     {
-        public OrderDbContext(DbContextOptions<OrderDbContext> options) : base(options)
-        {
-        }
-
         public DbSet<Order> Orders => Set<Order>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -113,7 +102,7 @@ public class UsageExample
     /// </summary>
     public class AzureServiceBusEventBus : IEventBus
     {
-        public Task PublishAsync(object @event, CancellationToken cancellationToken = default)
+        public Task PublishAsync(object eventData, CancellationToken cancellationToken = default)
         {
             // Implementation: Send to Azure Service Bus
             // var message = new ServiceBusMessage(JsonSerializer.Serialize(@event));

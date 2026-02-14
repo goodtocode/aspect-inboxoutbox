@@ -6,12 +6,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Goodtocode.InboxOutbox.Tests.HostedServices;
 
-public class TestDbContext : DbContext
+public class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options)
 {
-    public TestDbContext(DbContextOptions<TestDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
@@ -34,7 +30,7 @@ public class TestOutboxEvent
 
 public class TestEventConsumer : IEventConsumer
 {
-    public List<object> ConsumedEvents { get; } = new();
+    public List<object> ConsumedEvents { get; } = [];
 
     public Task ConsumeAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
     {
@@ -53,18 +49,18 @@ public class ThrowingEventConsumer : IEventConsumer
 
 public class TestEventBus : IEventBus
 {
-    public List<object> PublishedEvents { get; } = new();
+    public List<object> PublishedEvents { get; } = [];
 
-    public Task PublishAsync(object @event, CancellationToken cancellationToken = default)
+    public Task PublishAsync(object eventData, CancellationToken cancellationToken = default)
     {
-        PublishedEvents.Add(@event);
+        PublishedEvents.Add(eventData);
         return Task.CompletedTask;
     }
 }
 
 public class ThrowingEventBus : IEventBus
 {
-    public Task PublishAsync(object @event, CancellationToken cancellationToken = default)
+    public Task PublishAsync(object eventData, CancellationToken cancellationToken = default)
     {
         throw new InvalidOperationException("Test exception in event bus");
     }
@@ -88,22 +84,17 @@ public class TestEventTypeRegistry : IEventTypeRegistry
         _registry[eventType.Name] = eventType;
     }
 
-    public Type Resolve(string typeName)
+    public Type Resolve(string eventTypeName)
     {
-        return _registry.TryGetValue(typeName, out var type)
+        return _registry.TryGetValue(eventTypeName, out var type)
             ? type
-            : throw new InvalidOperationException($"Event type '{typeName}' not registered");
+            : throw new InvalidOperationException($"Event type '{eventTypeName}' not registered");
     }
 }
 
-public class TestLogger<T> : ILogger<T>
+public class TestLogger<T>(List<string> logMessages) : ILogger<T>
 {
-    private readonly List<string> _logMessages;
-
-    public TestLogger(List<string> logMessages)
-    {
-        _logMessages = logMessages;
-    }
+    private readonly List<string> _logMessages = logMessages;
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
