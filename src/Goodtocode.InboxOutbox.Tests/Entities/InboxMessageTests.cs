@@ -1,6 +1,6 @@
 using Goodtocode.InboxOutbox.Entities;
 
-namespace Goodtocode.InboxOutbox.Tests;
+namespace Goodtocode.InboxOutbox.Tests.Entities;
 
 [TestClass]
 public class InboxMessageTests

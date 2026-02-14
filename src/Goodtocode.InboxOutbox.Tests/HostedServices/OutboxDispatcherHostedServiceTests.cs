@@ -12,7 +12,7 @@ namespace Goodtocode.InboxOutbox.Tests.HostedServices;
 public class OutboxDispatcherHostedServiceTests
 {
     [TestMethod]
-    public async Task OutboxDispatcher_PublishesPendingMessages_Success()
+    public async Task OutboxDispatcherPublishesPendingMessagesSuccess()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -32,7 +32,7 @@ public class OutboxDispatcherHostedServiceTests
         };
 
         dbContext.OutboxMessages.Add(outboxMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         var eventBus = new TestEventBus();
         var eventTypeRegistry = new TestEventTypeRegistry();
@@ -50,20 +50,20 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var publishedMessage = await dbContext.OutboxMessages.FindAsync(outboxMessage.Id);
+        var publishedMessage = await dbContext.OutboxMessages.FindAsync([outboxMessage.Id], CancellationToken.None);
         Assert.IsNotNull(publishedMessage);
         Assert.AreEqual(1, publishedMessage.Status); // Published
         Assert.IsNotNull(publishedMessage.LastDispatchedOnUtc);
-        Assert.AreEqual(1, eventBus.PublishedEvents.Count);
+        Assert.HasCount(1, eventBus.PublishedEvents);
         Assert.IsInstanceOfType<TestOutboxEvent>(eventBus.PublishedEvents[0]);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_HandlesPublishingError_MarksAsFailed()
+    public async Task OutboxDispatcherHandlesPublishingErrorMarksAsFailed()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -83,7 +83,7 @@ public class OutboxDispatcherHostedServiceTests
         };
 
         dbContext.OutboxMessages.Add(outboxMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         var eventBus = new ThrowingEventBus();
         var eventTypeRegistry = new TestEventTypeRegistry();
@@ -101,19 +101,19 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var publishedMessage = await dbContext.OutboxMessages.FindAsync(outboxMessage.Id);
+        var publishedMessage = await dbContext.OutboxMessages.FindAsync([outboxMessage.Id], CancellationToken.None);
         Assert.IsNotNull(publishedMessage);
         Assert.AreEqual(2, publishedMessage.Status); // Failed
         Assert.IsNotNull(publishedMessage.LastDispatchError);
-        Assert.IsTrue(publishedMessage.LastDispatchError.Contains("Test exception"));
+        Assert.Contains("Test exception", publishedMessage.LastDispatchError);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_WithNoDbContext_LogsWarningAndContinues()
+    public async Task OutboxDispatcherWithNoDbContextLogsWarningAndContinues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -129,15 +129,15 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(600);
+        await Task.Delay(600, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.IsTrue(loggerMessages.Any(m => m.Contains("No DbContext registered")));
+        Assert.Contains(m => m.Contains("No DbContext registered"), loggerMessages);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_WithNoEventBus_LogsWarningAndContinues()
+    public async Task OutboxDispatcherWithNoEventBusLogsWarningAndContinues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -159,15 +159,15 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(600);
+        await Task.Delay(600, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.IsTrue(loggerMessages.Any(m => m.Contains("No IEventBus registered")));
+        Assert.Contains(m => m.Contains("No IEventBus registered"), loggerMessages);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_WithNoEventTypeRegistry_LogsWarningAndContinues()
+    public async Task OutboxDispatcherWithNoEventTypeRegistryLogsWarningAndContinues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -191,15 +191,15 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(600);
+        await Task.Delay(600, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.IsTrue(loggerMessages.Any(m => m.Contains("No IEventTypeRegistry registered")));
+        Assert.Contains(m => m.Contains("No IEventTypeRegistry registered"), loggerMessages);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_PublishesMultipleMessages_InOrder()
+    public async Task OutboxDispatcherPublishesMultipleMessagesInOrder()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -224,7 +224,7 @@ public class OutboxDispatcherHostedServiceTests
             };
             dbContext.OutboxMessages.Add(outboxMessage);
         }
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         services.AddSingleton<DbContext>(dbContext);
         services.AddSingleton<IEventBus>(eventBus);
@@ -239,17 +239,17 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1500);
+        await Task.Delay(1500, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var publishedMessages = await dbContext.OutboxMessages.Where(m => m.Status == 1).CountAsync();
+        var publishedMessages = await dbContext.OutboxMessages.Where(m => m.Status == 1).CountAsync(TestContext.CancellationToken);
         Assert.AreEqual(5, publishedMessages);
-        Assert.AreEqual(5, eventBus.PublishedEvents.Count);
+        Assert.HasCount(5, eventBus.PublishedEvents);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_SkipsAlreadyPublishedMessages()
+    public async Task OutboxDispatcherSkipsAlreadyPublishedMessages()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -273,7 +273,7 @@ public class OutboxDispatcherHostedServiceTests
         };
 
         dbContext.OutboxMessages.Add(publishedMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         services.AddSingleton<DbContext>(dbContext);
         services.AddSingleton<IEventBus>(eventBus);
@@ -288,15 +288,15 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.AreEqual(0, eventBus.PublishedEvents.Count);
+        Assert.IsEmpty(eventBus.PublishedEvents);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_HandlesCancellation_StopsGracefully()
+    public async Task OutboxDispatcherHandlesCancellationStopsGracefully()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -321,15 +321,14 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(300);
+        await Task.Delay(300, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert - No exception should be thrown
-        Assert.IsTrue(true);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_HandlesDeserializationError_MarksAsFailed()
+    public async Task OutboxDispatcherHandlesDeserializationErrorMarksAsFailed()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -348,7 +347,7 @@ public class OutboxDispatcherHostedServiceTests
         };
 
         dbContext.OutboxMessages.Add(outboxMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         var eventBus = new TestEventBus();
         var eventTypeRegistry = new TestEventTypeRegistry();
@@ -366,18 +365,18 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var failedMessage = await dbContext.OutboxMessages.FindAsync(outboxMessage.Id);
+        var failedMessage = await dbContext.OutboxMessages.FindAsync([outboxMessage.Id], CancellationToken.None);
         Assert.IsNotNull(failedMessage);
         Assert.AreEqual(2, failedMessage.Status); // Failed
         Assert.IsNotNull(failedMessage.LastDispatchError);
     }
 
     [TestMethod]
-    public async Task OutboxDispatcher_ProcessesUpTo100Messages_PerBatch()
+    public async Task OutboxDispatcherProcessesUpTo100MessagesPerBatch()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -403,7 +402,7 @@ public class OutboxDispatcherHostedServiceTests
             };
             dbContext.OutboxMessages.Add(outboxMessage);
         }
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         services.AddSingleton<DbContext>(dbContext);
         services.AddSingleton<IEventBus>(eventBus);
@@ -418,11 +417,13 @@ public class OutboxDispatcherHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1500); // Give time for at least one batch
+        await Task.Delay(1500, TestContext.CancellationToken); // Give time for at least one batch
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert - Should have processed at least 100 in first batch
-        var publishedMessages = await dbContext.OutboxMessages.Where(m => m.Status == 1).CountAsync();
-        Assert.IsTrue(publishedMessages >= 100);
+        var publishedMessages = await dbContext.OutboxMessages.Where(m => m.Status == 1).CountAsync(TestContext.CancellationToken);
+        Assert.IsGreaterThanOrEqualTo(100, publishedMessages);
     }
+
+    public TestContext TestContext { get; set; }
 }

@@ -1,4 +1,5 @@
 using Goodtocode.InboxOutbox.Entities;
+using Goodtocode.InboxOutbox.Extensions;
 using Goodtocode.InboxOutbox.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,24 +12,17 @@ namespace Goodtocode.InboxOutbox.HostedServices;
 /// <summary>
 /// Background service that processes and publishes outbox messages
 /// </summary>
-public sealed class OutboxDispatcherHostedService : BackgroundService
+public sealed class OutboxDispatcherHostedService(
+    IServiceProvider serviceProvider,
+    ILogger<OutboxDispatcherHostedService> logger) : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<OutboxDispatcherHostedService> _logger;
-    private readonly TimeSpan _interval;
-
-    public OutboxDispatcherHostedService(
-        IServiceProvider serviceProvider,
-        ILogger<OutboxDispatcherHostedService> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-        _interval = TimeSpan.FromMilliseconds(500);
-    }
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<OutboxDispatcherHostedService> _logger = logger;
+    private readonly TimeSpan _interval = TimeSpan.FromMilliseconds(500);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Outbox Dispatcher Hosted Service started");
+        _logger.LogOutboxDispatcherStarted();
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -38,13 +32,13 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing outbox messages");
+                _logger.LogErrorProcessingOutboxMessages(ex);
             }
 
             await Task.Delay(_interval, stoppingToken);
         }
 
-        _logger.LogInformation("Outbox Dispatcher Hosted Service stopped");
+        _logger.LogOutboxDispatcherStopped();
     }
 
     private async Task ProcessOutboxMessagesAsync(CancellationToken cancellationToken)
@@ -54,21 +48,21 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
         var dbContext = scope.ServiceProvider.GetService<DbContext>();
         if (dbContext is null)
         {
-            _logger.LogWarning("No DbContext registered. Outbox dispatcher cannot run.");
+            _logger.LogNoDbContextRegistered();
             return;
         }
 
         var eventBus = scope.ServiceProvider.GetService<IEventBus>();
         if (eventBus is null)
         {
-            _logger.LogWarning("No IEventBus registered. Outbox dispatcher cannot run.");
+            _logger.LogNoEventBusRegistered();
             return;
         }
 
         var eventTypeRegistry = scope.ServiceProvider.GetService<IEventTypeRegistry>();
         if (eventTypeRegistry is null)
         {
-            _logger.LogWarning("No IEventTypeRegistry registered. Outbox dispatcher cannot run.");
+            _logger.LogNoEventTypeRegistryRegistered();
             return;
         }
 
@@ -92,17 +86,14 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
                     message.Status = 1; // Published
                     message.LastDispatchedOnUtc = DateTime.UtcNow;
 
-                    _logger.LogInformation("Published outbox message {MessageId} of type {EventType}",
-                        message.Id, message.Type);
+                    _logger.LogPublishedOutboxMessage(message.Id, message.Type);
                 }
             }
             catch (Exception ex)
             {
                 message.Status = 2; // Failed
                 message.LastDispatchError = ex.ToString();
-
-                _logger.LogError(ex, "Failed to publish outbox message {MessageId} of type {EventType}",
-                    message.Id, message.Type);
+                _logger.LogFailedToPublishOutboxMessage(ex, message.Id, message.Type);
             }
         }
 
@@ -111,4 +102,31 @@ public sealed class OutboxDispatcherHostedService : BackgroundService
             await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
+}
+
+public static partial class LoggerExtensions
+{
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Outbox Dispatcher Hosted Service started")]
+    public static partial void LogOutboxDispatcherStarted(this ILogger logger);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "Outbox Dispatcher Hosted Service stopped")]
+    public static partial void LogOutboxDispatcherStopped(this ILogger logger);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Error processing outbox messages")]
+    public static partial void LogErrorProcessingOutboxMessages(this ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "No DbContext registered. Outbox dispatcher cannot run.")]
+    public static partial void LogNoDbContextRegistered(this ILogger logger);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Warning, Message = "No IEventBus registered. Outbox dispatcher cannot run.")]
+    public static partial void LogNoEventBusRegistered(this ILogger logger);
+
+    [LoggerMessage(EventId = 6, Level = LogLevel.Warning, Message = "No IEventTypeRegistry registered. Outbox dispatcher cannot run.")]
+    public static partial void LogNoEventTypeRegistryRegistered(this ILogger logger);
+
+    [LoggerMessage(EventId = 7, Level = LogLevel.Information, Message = "Published outbox message {MessageId} of type {EventType}")]
+    public static partial void LogPublishedOutboxMessage(this ILogger logger, Guid messageId, string eventType);
+
+    [LoggerMessage(EventId = 8, Level = LogLevel.Error, Message = "Failed to publish outbox message {MessageId} of type {EventType}")]
+    public static partial void LogFailedToPublishOutboxMessage(this ILogger logger, Exception exception, Guid messageId, string eventType);
 }

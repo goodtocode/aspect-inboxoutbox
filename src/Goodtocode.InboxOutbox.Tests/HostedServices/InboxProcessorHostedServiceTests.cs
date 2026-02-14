@@ -12,7 +12,7 @@ namespace Goodtocode.InboxOutbox.Tests.HostedServices;
 public class InboxProcessorHostedServiceTests
 {
     [TestMethod]
-    public async Task InboxProcessor_ProcessesPendingMessages_Success()
+    public async Task InboxProcessorProcessesPendingMessagesSuccess()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -32,7 +32,7 @@ public class InboxProcessorHostedServiceTests
         };
 
         dbContext.InboxMessages.Add(inboxMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         var eventConsumer = new TestEventConsumer();
         var eventTypeRegistry = new TestEventTypeRegistry();
@@ -50,20 +50,20 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         var executeTask = hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var processedMessage = await dbContext.InboxMessages.FindAsync(inboxMessage.Id);
+        var processedMessage = await dbContext.InboxMessages.FindAsync([inboxMessage.Id], TestContext.CancellationToken);
         Assert.IsNotNull(processedMessage);
         Assert.AreEqual(1, processedMessage.Status); // Processed
         Assert.IsNotNull(processedMessage.ProcessedOnUtc);
-        Assert.AreEqual(1, eventConsumer.ConsumedEvents.Count);
+        Assert.HasCount(1, eventConsumer.ConsumedEvents);
         Assert.IsInstanceOfType<TestInboxEvent>(eventConsumer.ConsumedEvents[0]);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_HandlesProcessingError_MarksAsFailed()
+    public async Task InboxProcessorHandlesProcessingErrorMarksAsFailed()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -83,7 +83,7 @@ public class InboxProcessorHostedServiceTests
         };
 
         dbContext.InboxMessages.Add(inboxMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         var eventConsumer = new ThrowingEventConsumer();
         var eventTypeRegistry = new TestEventTypeRegistry();
@@ -101,19 +101,19 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         var executeTask = hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var processedMessage = await dbContext.InboxMessages.FindAsync(inboxMessage.Id);
+        var processedMessage = await dbContext.InboxMessages.FindAsync([inboxMessage.Id], CancellationToken.None);
         Assert.IsNotNull(processedMessage);
         Assert.AreEqual(2, processedMessage.Status); // Failed
         Assert.IsNotNull(processedMessage.ProcessingError);
-        Assert.IsTrue(processedMessage.ProcessingError.Contains("Test exception"));
+        Assert.Contains("Test exception", processedMessage.ProcessingError);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_WithNoDbContext_LogsWarningAndContinues()
+    public async Task InboxProcessorWithNoDbContextLogsWarningAndContinues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -129,15 +129,15 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(600);
+        await Task.Delay(600, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.IsTrue(loggerMessages.Any(m => m.Contains("No DbContext registered")));
+        Assert.Contains(m => m.Contains("No DbContext registered"), loggerMessages);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_WithNoEventConsumer_LogsWarningAndContinues()
+    public async Task InboxProcessorWithNoEventConsumerLogsWarningAndContinues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -159,15 +159,15 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(600);
+        await Task.Delay(600, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.IsTrue(loggerMessages.Any(m => m.Contains("No IEventConsumer registered")));
+        Assert.Contains(m => m.Contains("No IEventConsumer registered"), loggerMessages);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_WithNoEventTypeRegistry_LogsWarningAndContinues()
+    public async Task InboxProcessorWithNoEventTypeRegistryLogsWarningAndContinues()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -191,15 +191,15 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(600);
+        await Task.Delay(600, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.IsTrue(loggerMessages.Any(m => m.Contains("No IEventTypeRegistry registered")));
+        Assert.Contains(m => m.Contains("No IEventTypeRegistry registered"), loggerMessages);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_ProcessesMultipleMessages_InOrder()
+    public async Task InboxProcessorProcessesMultipleMessagesInOrder()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -224,7 +224,7 @@ public class InboxProcessorHostedServiceTests
             };
             dbContext.InboxMessages.Add(inboxMessage);
         }
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         services.AddSingleton<DbContext>(dbContext);
         services.AddSingleton<IEventConsumer>(eventConsumer);
@@ -239,17 +239,17 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1500);
+        await Task.Delay(1500, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        var processedMessages = await dbContext.InboxMessages.Where(m => m.Status == 1).CountAsync();
+        var processedMessages = await dbContext.InboxMessages.Where(m => m.Status == 1).CountAsync(TestContext.CancellationToken);
         Assert.AreEqual(5, processedMessages);
-        Assert.AreEqual(5, eventConsumer.ConsumedEvents.Count);
+        Assert.HasCount(5, eventConsumer.ConsumedEvents);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_SkipsAlreadyProcessedMessages()
+    public async Task InboxProcessorSkipsAlreadyProcessedMessages()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -273,7 +273,7 @@ public class InboxProcessorHostedServiceTests
         };
 
         dbContext.InboxMessages.Add(processedMessage);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.CancellationToken);
 
         services.AddSingleton<DbContext>(dbContext);
         services.AddSingleton<IEventConsumer>(eventConsumer);
@@ -288,15 +288,15 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert
-        Assert.AreEqual(0, eventConsumer.ConsumedEvents.Count);
+        Assert.IsEmpty(eventConsumer.ConsumedEvents);
     }
 
     [TestMethod]
-    public async Task InboxProcessor_HandlesCancellation_StopsGracefully()
+    public async Task InboxProcessorHandlesCancellationStopsGracefully()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -321,10 +321,12 @@ public class InboxProcessorHostedServiceTests
 
         // Act
         await hostedService.StartAsync(cts.Token);
-        await Task.Delay(300);
+        await Task.Delay(300, TestContext.CancellationToken);
         await hostedService.StopAsync(CancellationToken.None);
 
         // Assert - No exception should be thrown
-        Assert.IsTrue(true);
+        // No assertion needed; test will fail if an exception is thrown
     }
+
+    public TestContext TestContext { get; set; }
 }

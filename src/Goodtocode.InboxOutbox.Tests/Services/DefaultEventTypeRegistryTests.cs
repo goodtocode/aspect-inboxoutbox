@@ -1,6 +1,6 @@
 using Goodtocode.InboxOutbox.Services;
 
-namespace Goodtocode.InboxOutbox.Tests;
+namespace Goodtocode.InboxOutbox.Tests.Services;
 
 [TestClass]
 public class DefaultEventTypeRegistryTests

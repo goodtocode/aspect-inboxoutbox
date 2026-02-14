@@ -5,5 +5,5 @@ namespace Goodtocode.InboxOutbox.Interfaces;
 /// </summary>
 public interface IEventConsumer
 {
-    Task ConsumeAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class;
+    Task ConsumeAsync<TEvent>(TEvent eventData, CancellationToken cancellationToken = default) where TEvent : class;
 }
